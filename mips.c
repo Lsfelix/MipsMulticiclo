@@ -5,6 +5,8 @@ int A;
 int B;
 int saidaUla;
 int zero;
+int regInst;
+int regDadoMem;
 int mux2(int a, int b, int controle);
 int mux3(int a, int b, int c, int controle);
 int mux4(int a, int b, int c, int d, int controle);
@@ -20,6 +22,13 @@ int extensaoDeSinal(int valor);
 int memoria[50];
 int registradores[32];
 
+void main(){
+    //ciclo 1:
+
+
+
+
+}
 int deslocaDois(int a){
     return a << 2;
 }
@@ -164,7 +173,6 @@ int memOp(int endereco, int dado, int EscMem, int LerMem){
 }
 
 //TODO: 
-//  Registradores intermediarios
 //  "Ligar os fios das funções"
 //  Controlador
 //  os "ciclos"
