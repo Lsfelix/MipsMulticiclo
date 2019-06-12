@@ -39,7 +39,6 @@ int pc;
 int A;
 int B;
 int saidaUla;
-int zero;
 int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
@@ -183,11 +182,7 @@ void MaquinaEstados(){
 }
 
 
-
-int deslocaDois(int a)
-{
-    return a << 2;
-}
+// apagado desloca dois, pois ele é usado para pular os endereços de 4 em 4 e nossa memória vai de 1 em 1
 int mux2(int a, int b, int controle)
 {
     switch (controle)
@@ -220,29 +215,8 @@ int mux3(int a, int b, int c, int controle)
         break;
     }
 }
-
-int extensaoDeSinal(int valor) { return valor; }
-
-int mux4(int a, int b, int c, int d, int controle)
-{
-    switch (controle)
-    {
-    case 0:
-        return a;
-        break;
-    case 1:
-        return b;
-        break;
-    case 2:
-        return c;
-        break;
-    case 3:
-        return d;
-        break;
-    default:
-        break;
-    }
-}
+//Apagado extensão de sinal, pois não é um prolema em c
+//Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
 //FIXME: Conferir operações de sll e srl
 int operacaoUla(int func, int controle)
 {
@@ -255,10 +229,10 @@ int operacaoUla(int func, int controle)
     case 2:       // 10: operações do tipo-R
         switch (func)
         {
-        case 0:       // 000000 sll VER QUAL OPERAÇÃO A ULA FAZ
-            return 3; // ?????
-        case 2:       // 000010 srl VER QUAL OPERAÇÃO A ULA FAZ
-            return 4; // ??????
+        case 0:       // 000000 sll 
+            return 3; // a ula faz sll
+        case 2:       // 000010 srl 
+            return 4; // a ula faz srl
         case 33:      // 100001 addu
             return 2; // a ula faz um add
         case 36:      // 100100 and
@@ -274,36 +248,33 @@ int operacaoUla(int func, int controle)
         break;
     }
 }
-//FIXME: Conferir operações de sll e srl
+//FIXME: Conferir operação set on les then
+// zero removido, pois não é necessário calcular ele smepre, quando a op for beq usar a saida da ula como zero
 int ula(int a, int b)
 {
     int resp;
     switch (BC.ULAOp)
     {
     case 0:
-        resp = a & b;
+        return a & b;
     case 1:
-        resp = a | b;
+        return a | b;
     case 2:
-        resp = a + b;
+        return a + b;
     case 3:
-        resp = -1; //????
+        return a >> b; 
     case 4:
-        resp = -1; //?????
+        return a << b; 
     case 6:
-        resp = a - b;
+        return a - b;
     case 7:
-        resp = -1; // ver como fazer um set on less then
+        return -1; // ver como fazer um set on less then
     default:
         break;
     }
-    if (resp == 0)
-        zero = 1;
-    else
-        zero = 0;
-    return resp;
-}
 
+}
+// conferir inc no controler
 void atualizaPc(int value, int inc)
 {
     if (inc == 1)
