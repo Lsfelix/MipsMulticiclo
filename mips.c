@@ -52,7 +52,7 @@ int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
 int mux3(int a, int b, int c, int controle);
-int ula(int a, int b,int func, int controle);
+int ula(int a, int b,int func);
 void atualizaPc(int value, int inc);
 int escritaPC(int zero);
 void leituraRegistradores(int reg1, int reg2);
@@ -64,7 +64,7 @@ void leArquivo();
 int* memoria;
 int* sp;
 int* data;
-int registradores[32];
+int* registradores;
 
 
 //Estabelece os sinais de acordo com o estado atual.
@@ -246,7 +246,9 @@ void MaquinaEstados(){
 }
 
 void main(){
-    memoria = malloc(50*sizeof(int));
+    memoria = calloc(50, sizeof(int));
+    registradores = calloc(32, sizeof(int));
+    *(registradores + 29) = memoria + 50;
     data = memoria + 20;
     leArquivo();
 }
@@ -288,7 +290,7 @@ int mux3(int a, int b, int c, int controle)
 //Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
 //FIXME: Conferir operações de sll e srl
 
-int ula(int a, int b,int func, int controle)
+int ula(int a, int b,int func)
 {
     switch (BC.ULAOp)
     {
