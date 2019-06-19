@@ -43,17 +43,18 @@ int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
 int mux3(int a, int b, int c, int controle);
-int mux4(int a, int b, int c, int d, int controle);
-int deslocaDois(int a);
 int ula(int a, int b);
 int operacaoUla(int func, int controle);
 void atualizaPc(int value, int inc);
 int escritaPC(int zero);
 void leituraRegistradores(int reg1, int reg2);
 void escritaRegistradores(int RegEsc, int reg, int dado);
-int leMemoria(int endereço, int lerMem);
-int extensaoDeSinal(int valor);
-int memoria[50];
+int leMemoria(int endereco, int lerMem);
+int charToHex(char c);
+int lineHexToInt(char* numero);
+int* memoria;
+int* sp;
+int* data;
 int registradores[32];
 
 
@@ -268,7 +269,9 @@ int ula(int a, int b)
     case 6:
         return a - b;
     case 7:
-        return -1; // ver como fazer um set on less then
+        if(a<b)
+            return 1;
+        return 0;
     default:
         break;
     }
@@ -310,7 +313,87 @@ int memOp(int endereco, int dado, int EscMem, int LerMem)
     else if (LerMem == 1)
         return memoria[endereco];
 }
-
+void leArquivo(){
+    FILE *arq;
+    char linha[15];
+    arq = fopen("Programa.mips", "rt");
+    if(arq == NULL){
+        printf("Problema ao abrir o arquivo");
+        return;
+    }
+    while(!feof(arq)){
+        fgets(linha, 15, arq);
+        if(memoria < data)
+            *memoria++ = lineHexToInt(linha);
+    }
+    fclose(arq);
+}
+int lineHexToInt(char* num){
+    num += 2;
+    int resp = 0;
+    while (*num != '\n')
+    {
+        resp = resp * 8;
+        resp += charToHex(*num++);   
+    }
+    return resp;
+}
+int charToHex(char c){
+    switch (c)
+    {
+    case '0':
+        return 0;
+        break;
+    case '1':
+        return 1;
+        break;
+    case '2':
+        return 2;
+        break;
+    case '3':
+        return 3;
+        break;
+    case '4':
+        return 4;
+        break;
+    case '5':
+        return 5;
+        break;
+    case '6':
+        return 6;
+        break;
+    case '7':
+        return 7;
+        break;
+    case '8':
+        return 8;
+        break;
+    case '9':
+        return 9;
+        break;
+    case 'A':
+        return 10;
+        break;
+    case 'B':
+        return 11;
+        break;
+    case 'C':
+        return 12;
+        break;
+    case 'D':
+        return 13;
+        break;
+    case 'E':
+        return 14;
+        break;
+    case 'F':
+        return 15;
+        break;
+    default:
+        return -1;
+        break;
+    }
+}
 //TODO:
 //  Registradores intermediarios
 //  "Ligar os fios das funções"
