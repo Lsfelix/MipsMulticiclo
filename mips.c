@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 //Estrutura do Bloco de BC
 struct Controle{
@@ -59,6 +60,7 @@ void escritaRegistradores(int RegEsc, int reg, int dado);
 int leMemoria(int endereco, int lerMem);
 int charToHex(char c);
 int lineHexToInt(char* numero);
+void leArquivo();
 int* memoria;
 int* sp;
 int* data;
@@ -243,6 +245,11 @@ void MaquinaEstados(){
 
 }
 
+void main(){
+    memoria = malloc(50*sizeof(int));
+    data = memoria + 20;
+    leArquivo();
+}
 
 // apagado desloca dois, pois ele é usado para pular os endereços de 4 em 4 e nossa memória vai de 1 em 1
 int mux2(int a, int b, int controle)
@@ -361,18 +368,26 @@ void leArquivo(){
     }
     while(!feof(arq)){
         fgets(linha, 15, arq);
-        if(memoria < data)
+        if(memoria < data){
             *memoria++ = lineHexToInt(linha);
+        }else{
+            printf("Programa não cabe na memória");
+            return;
+        }
+            printf("%d\n", *(memoria - 1));
     }
     fclose(arq);
 }
 int lineHexToInt(char* num){
     num += 2;
+    int i = 0;
     int resp = 0;
-    while (*num != '\n')
+    while (i != 8)
     {
-        resp = resp * 8;
-        resp += charToHex(*num++);   
+        resp = resp << 4;
+        resp += charToHex(*num++);
+        i++;
+      
     }
     return resp;
 }
