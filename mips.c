@@ -43,8 +43,7 @@ int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
 int mux3(int a, int b, int c, int controle);
-int ula(int a, int b);
-int operacaoUla(int func, int controle);
+int ula(int a, int b,int func, int controle);
 void atualizaPc(int value, int inc);
 int escritaPC(int zero);
 void leituraRegistradores(int reg1, int reg2);
@@ -77,7 +76,7 @@ void MaquinaEstados(){
         BC.FontePC = 0;
 
         //Ações
-        ula(pc,4); //PC = PC + 4
+        //ula(pc,4); //PC = PC + 4
         
 
 
@@ -219,63 +218,39 @@ int mux3(int a, int b, int c, int controle)
 //Apagado extensão de sinal, pois não é um prolema em c
 //Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
 //FIXME: Conferir operações de sll e srl
-int operacaoUla(int func, int controle)
+int ula(int a, int b,int func, int controle)
 {
     switch (controle)
     {
     case 0:       // 00: lw, sw, addiu e lui a ula faz um add
-        return 2; // codigo do add
+        return a + b; // codigo do add
     case 1:       // 01: beq a ula faz um subb
-        return 6; // codigo do subb
+        if(a == b)
+            return 1;
+        return 0; // codigo do subb
     case 2:       // 10: operações do tipo-R
         switch (func)
         {
         case 0:       // 000000 sll 
-            return 3; // a ula faz sll
+            return a << b; // a ula faz sll
         case 2:       // 000010 srl 
-            return 4; // a ula faz srl
+            return a >> b; // a ula faz srl
         case 33:      // 100001 addu
-            return 2; // a ula faz um add
+            return a + b; // a ula faz um add
         case 36:      // 100100 and
-            return 0; // a ula faz um and
+            return a & b; // a ula faz um and
         case 42:      // 101010 slt
-            return 7; // a ula faz um set on less then
+            if(a<b)
+                return 1;
+            return 0;// a ula faz um set on less then
         default:
             break;
         }
     case 3:       //11: ori a ula faz um or
-        return 1; // codigo do or
+        return a | b; // codigo do or
     default:
         break;
     }
-}
-//FIXME: Conferir operação set on les then
-// zero removido, pois não é necessário calcular ele smepre, quando a op for beq usar a saida da ula como zero
-int ula(int a, int b)
-{
-    int resp;
-    switch (BC.ULAOp)
-    {
-    case 0:
-        return a & b;
-    case 1:
-        return a | b;
-    case 2:
-        return a + b;
-    case 3:
-        return a >> b; 
-    case 4:
-        return a << b; 
-    case 6:
-        return a - b;
-    case 7:
-        if(a<b)
-            return 1;
-        return 0;
-    default:
-        break;
-    }
-
 }
 // conferir inc no controler
 void atualizaPc(int value, int inc)
