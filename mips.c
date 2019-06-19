@@ -2,6 +2,9 @@
 
 //Estrutura do Bloco de BC
 struct Controle{
+    
+    int opcode; //Variável que guarda o opcode.
+
     int Branch; //Define se é uma instrução de branch.
     int PCEsc; //Habilita a escrita no PC.
     int IouD; //Define o endereço de memória trabalhado.
@@ -18,23 +21,28 @@ struct Controle{
 
 }BC; //Bloco de Controle
 
-enum Estados {
+enum Estados
+{
     Busca0,
     Decodifica1,
-    LoadOuStore2,
-    LoadAcesso3,
-    LoadEscrita4,
-    SaveAcesso5,
-    TipoRExec6,
-    TipoREscrita7,
-    SaltoCond8,
-    SaltoIncond9
+    TipoI2,
+    AddI3,
+    AddiEscrita4,
+    Ori5,
+    OriEscrita6,
+    LoadAcesso7,
+    LoadEscrita8,
+    SaveAcesso9,
+    LuiEscrita10,
+    TipoRExec11,
+    TipoREscrita12,
+    SaltoCond13,
+    SaltoIncond14,
+    TipoIEscrita15
 };
-
 
 enum Estados estadoAtual = Busca0;
 
-int opcode;
 int pc;
 int A;
 int B;
@@ -46,7 +54,7 @@ int mux3(int a, int b, int c, int controle);
 int mux4(int a, int b, int c, int d, int controle);
 int deslocaDois(int a);
 int ula(int a, int b);
-int operacaoUla(int func, int controle);
+int operacaoUla(int func);
 void atualizaPc(int value, int inc);
 int escritaPC(int zero);
 void leituraRegistradores(int reg1, int reg2);
@@ -59,6 +67,7 @@ int registradores[32];
 
 //Estabelece os sinais de acordo com o estado atual.
 void MaquinaEstados(){
+
 
     switch (estadoAtual)
     {
@@ -77,7 +86,7 @@ void MaquinaEstados(){
 
         //Ações
         ula(pc,4); //PC = PC + 4
-        
+       
 
 
         estadoAtual = Decodifica1;
@@ -89,20 +98,20 @@ void MaquinaEstados(){
         BC.ULAFonteB = 3;
         BC.ULAOp = 0;
 
-        switch (opcode)
+        switch (BC.opcode)
         {
 
         case 1:
-            estadoAtual = LoadOuStore2;
+            estadoAtual = TipoI2;
             break;
         case 2:
-            estadoAtual = TipoRExec6; 
+            estadoAtual = TipoRExec11; 
             break;
         case 3:
-            estadoAtual = SaltoCond8;
+            estadoAtual = SaltoCond13;
             break;
         case 4:
-            estadoAtual = SaltoIncond9;
+            estadoAtual = SaltoIncond14;
             break;
         default:
             break;
@@ -110,45 +119,92 @@ void MaquinaEstados(){
 
         break;
 
-    case LoadOuStore2:
-        // *LW* ou *SW* -- calculo do endereço de acesso à memória -- 2 -> 3
+    case TipoI2:
+        // *TipoI* -- Define o tipo I -- 2 -> 3 | 4
         BC.ULAFonteA = 1;
         BC.ULAFonteB = 2;
-        BC.ULAOp = 0;
-        estadoAtual = LoadAcesso3;
-        break;
+        BC.RegDst = 0;
+        
+        switch (BC.opcode)
+        {
+        case 1:
+            estadoAtual = AddI3;
+            break;
+        
+        default:
+            estadoAtual = Ori5;
+            break;
+        }
 
-    case LoadAcesso3:
+        break;
+    
+    case AddI3:
+        // *LW* ou *SW* ou *ADDIU* ou *LUI* -- Execução da soma --  3 -> 5 | 3 | 4
+        BC.ULAOp = 0;
+
+        switch (BC.opcode)
+        {
+        case 1://Alterar Case
+            estadoAtual = LoadAcesso7;            
+            break;
+        case 2://Alterar Case
+            estadoAtual = SaveAcesso9;
+        case 3://Alterar Case
+            estadoAtual = AddiEscrita4;
+        case 15:
+            estadoAtual = LuiEscrita10;
+        default:
+            break;
+        }
+    
+    case AddiEscrita4:
+
+
+    case Ori5:
+        // *OrI -- Execução ORI -- 5 -> 6 
+        BC.ULAOp = 3;
+
+    case OriEscrita6:
+        // *OrI -- Escrita ORI -- 6 -> 0
+        BC.MemParaReg = 0;
+        BC.EscReg = 1;
+
+    case LoadAcesso7:
         // *LW* -- Acesso à memória -- 3 -> 4
         BC.LerMem = 1;
         BC.IouD = 1;
-        estadoAtual = LoadEscrita4;
+        estadoAtual = LoadEscrita8;
         break;
 
-    case LoadEscrita4:
+    case LoadEscrita8:
         // *LW* -- Escrita no registrador Rt -- 4 -> 0
         BC.EscReg= 1;
         BC.MemParaReg = 1;
-        BC.RegDst = 0;
         estadoAtual = Busca0;
         break;
 
-    case SaveAcesso5:
+    case SaveAcesso9:
         // *SW* -- Acesso á memória -- 5 -> 0
         BC.EscMem = 1;
         BC.IouD = 1;
         estadoAtual = Busca0;
         break;
 
-    case TipoRExec6:
+    case LuiEscrita10:
+        // *LUI* -- Escrita nos registradores -- 10 -> 0
+        BC.EscReg = 1;
+        BC.MemParaReg = 0;
+        
+
+    case TipoRExec11:
         // *Tipo R* -- Execução -- 6 -> 7
         BC.ULAFonteA = 1;
         BC.ULAFonteB = 0;
         BC.ULAOp = 2;
-        estadoAtual = TipoREscrita7;
+        estadoAtual = TipoREscrita12;
         break;
 
-    case TipoREscrita7:
+    case TipoREscrita12:
         // *Tipo R* -- Escrita em Rd -- 7 -> 0
         BC.RegDst = 1;
         BC.EscReg = 1;
@@ -156,7 +212,7 @@ void MaquinaEstados(){
         estadoAtual = Busca0;
         break;
 
-    case SaltoCond8:
+    case SaltoCond13:
         // *Desvio Condicional* -- Término do desvio condicional -- 8 -> 0
         BC.ULAFonteA = 1;
         BC.ULAFonteB = 0;
@@ -167,13 +223,19 @@ void MaquinaEstados(){
         estadoAtual = Busca0;
         break;
 
-    case SaltoIncond9:
+    case SaltoIncond14:
         // *Desvio Incondicional* -- Término do desvio incondicional -- 9 -> 0
         BC.PCEsc = 1;
         BC.FontePC = 2;
         estadoAtual = Busca0;
         break;
 
+    case TipoIEscrita15:
+        // *Tipo I* -- Escrita nos registardores -- 10 -> 0
+        BC.EscReg = 1;
+        BC.RegDst = 0;
+        BC.MemParaReg = 0;
+        break;
     default:
         break;
     }
@@ -218,9 +280,9 @@ int mux3(int a, int b, int c, int controle)
 //Apagado extensão de sinal, pois não é um prolema em c
 //Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
 //FIXME: Conferir operações de sll e srl
-int operacaoUla(int func, int controle)
+int operacaoUla(int func)
 {
-    switch (controle)
+    switch (BC.ULAOp)
     {
     case 0:       // 00: lw, sw, addiu e lui a ula faz um add
         return 2; // codigo do add
