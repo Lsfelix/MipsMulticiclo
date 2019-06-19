@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 //Estrutura do Bloco de BC
 struct Controle{
@@ -47,8 +48,7 @@ int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
 int mux3(int a, int b, int c, int controle);
-int ula(int a, int b);
-int operacaoUla(int func);
+int ula(int a, int b,int func, int controle);
 void atualizaPc(int value, int inc);
 int escritaPC(int zero);
 void leituraRegistradores(int reg1, int reg2);
@@ -56,6 +56,7 @@ void escritaRegistradores(int RegEsc, int reg, int dado);
 int leMemoria(int endereco, int lerMem);
 int charToHex(char c);
 int lineHexToInt(char* numero);
+void leArquivo();
 int* memoria;
 int* sp;
 int* data;
@@ -84,7 +85,7 @@ void MaquinaEstados(){
         
         //Ações
         regInst = memoria[pc];
-        ula(pc,4); //PC = PC + 4
+        //PC = PC + 4
 
         //Próximo Estado
         estadoAtual = Decodifica1;
@@ -102,7 +103,7 @@ void MaquinaEstados(){
         BC.opcode = regInst >> 26;
         A = registradores[(regInst >> 21) & 31];
         B = registradores[(regInst >> 17) & 31];
-        saidaUla = ula(pc,(regInst & 32767));
+        ///saidaUla = ula(pc,(regInst & 32767));
 
         //Próximos estados
         switch (BC.opcode)
@@ -238,6 +239,11 @@ void MaquinaEstados(){
 
 }
 
+void main(){
+    memoria = malloc(50*sizeof(int));
+    data = memoria + 20;
+    leArquivo();
+}
 
 // apagado desloca dois, pois ele é usado para pular os endereços de 4 em 4 e nossa memória vai de 1 em 1
 int mux2(int a, int b, int controle)
@@ -275,63 +281,40 @@ int mux3(int a, int b, int c, int controle)
 //Apagado extensão de sinal, pois não é um prolema em c
 //Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
 //FIXME: Conferir operações de sll e srl
-int operacaoUla(int func)
+
+int ula(int a, int b,int func, int controle)
 {
     switch (BC.ULAOp)
     {
     case 0:       // 00: lw, sw, addiu e lui a ula faz um add
-        return 2; // codigo do add
+        return a + b; // codigo do add
     case 1:       // 01: beq a ula faz um subb
-        return 6; // codigo do subb
+        if(a == b)
+            return 1;
+        return 0; // codigo do subb
     case 2:       // 10: operações do tipo-R
         switch (func)
         {
         case 0:       // 000000 sll 
-            return 3; // a ula faz sll
+            return a << b; // a ula faz sll
         case 2:       // 000010 srl 
-            return 4; // a ula faz srl
+            return a >> b; // a ula faz srl
         case 33:      // 100001 addu
-            return 2; // a ula faz um add
+            return a + b; // a ula faz um add
         case 36:      // 100100 and
-            return 0; // a ula faz um and
+            return a & b; // a ula faz um and
         case 42:      // 101010 slt
-            return 7; // a ula faz um set on less then
+            if(a<b)
+                return 1;
+            return 0;// a ula faz um set on less then
         default:
             break;
         }
     case 3:       //11: ori a ula faz um or
-        return 1; // codigo do or
+        return a | b; // codigo do or
     default:
         break;
     }
-}
-//FIXME: Conferir operação set on les then
-// zero removido, pois não é necessário calcular ele smepre, quando a op for beq usar a saida da ula como zero
-int ula(int a, int b)
-{
-    int resp;
-    switch (BC.ULAOp)
-    {
-    case 0:
-        return a & b;
-    case 1:
-        return a | b;
-    case 2:
-        return a + b;
-    case 3:
-        return a >> b; 
-    case 4:
-        return a << b; 
-    case 6:
-        return a - b;
-    case 7:
-        if(a<b)
-            return 1;
-        return 0;
-    default:
-        break;
-    }
-
 }
 // conferir inc no controler
 void atualizaPc(int value, int inc)
@@ -379,18 +362,26 @@ void leArquivo(){
     }
     while(!feof(arq)){
         fgets(linha, 15, arq);
-        if(memoria < data)
+        if(memoria < data){
             *memoria++ = lineHexToInt(linha);
+        }else{
+            printf("Programa não cabe na memória");
+            return;
+        }
+            printf("%d\n", *(memoria - 1));
     }
     fclose(arq);
 }
 int lineHexToInt(char* num){
     num += 2;
+    int i = 0;
     int resp = 0;
-    while (*num != '\n')
+    while (i != 8)
     {
-        resp = resp * 8;
-        resp += charToHex(*num++);   
+        resp = resp << 4;
+        resp += charToHex(*num++);
+        i++;
+      
     }
     return resp;
 }
