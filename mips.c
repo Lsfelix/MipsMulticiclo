@@ -58,7 +58,6 @@ int charToHex(char c);
 int lineHexToInt(char* numero);
 void leArquivo();
 int* memoria;
-int* sp;
 int* data;
 int registradores[32];
 
