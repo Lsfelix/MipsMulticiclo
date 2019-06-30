@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//Estrutura do Bloco de BC
+/*
+*************************************
+*****Estrutura do Bloco de BC********
+*************************************
+*/
 struct Controle{
     
     int opcode; //Variável que guarda o opcode.
@@ -40,31 +44,16 @@ enum Estados
 
 enum Estados estadoAtual = Busca0;
 
-int pc;
-int A;
-int B;
-int saidaUla;
-int regInst;
-int regDadoMem;
-int mux2(int a, int b, int controle);
-int mux3(int a, int b, int c, int controle);
-int ula(int a, int b,int func);
-void atualizaPc(int value, int inc);
-int escritaPC(int zero);
-void leituraRegistradores(int reg1, int reg2);
-void escritaRegistradores(int RegEsc, int reg, int dado);
-int leMemoria(int endereco, int lerMem);
-int charToHex(char c);
-int lineHexToInt(char* numero);
-void leArquivo();
-int* memoria;
-int* data;
-int* registradores;
 
+/*
+*******************************
+*****Maquina de Estados********
+*******************************
+*/
 
-//Estabelece os sinais de acordo com o estado atual.
-void MaquinaEstados(){
-
+//Controla as etapas da execução.
+void MaquinaEstados()
+{
 
     switch (estadoAtual)
     {
@@ -81,10 +70,9 @@ void MaquinaEstados(){
         BC.PCEsc = 1;
         BC.FontePC = 0;
 
-        
         //Ações
         regInst = memoria[pc];
-        //PC = PC + 4
+        //PC = PC + 1
 
         //Próximo Estado
         estadoAtual = Decodifica1;
@@ -92,7 +80,7 @@ void MaquinaEstados(){
 
     case Decodifica1:
         //Decodificação da instrução -- leitura dos registradores Rs e Rt -- 1 -> 3 || 6 || 8 || 9
-        
+
         //Define sinais de Controle
         BC.ULAFonteA = 0;
         BC.ULAFonteB = 3;
@@ -111,7 +99,7 @@ void MaquinaEstados(){
             estadoAtual = TipoI2;
             break;
         case 0:
-            estadoAtual = TipoRExec7; 
+            estadoAtual = TipoRExec7;
             break;
         case 3:
             estadoAtual = SaltoCond9;
@@ -127,7 +115,7 @@ void MaquinaEstados(){
 
     case TipoI2:
         // *TipoI* -- Define o tipo I -- 2 -> 3 | 4
-        
+
         //Define sinais de controle
         BC.ULAFonteA = 1;
         BC.ULAFonteB = 2;
@@ -140,36 +128,34 @@ void MaquinaEstados(){
         case 1:
             estadoAtual = AddI3;
             break;
-        
+
         default:
             estadoAtual = Ori4;
             break;
         }
 
         break;
-    
+
     case AddI3:
         // *LW* ou *SW* ou *ADDIU* ou *LUI* -- Execução da soma --  3 -> 5 | 3 | 4
         BC.ULAOp = 0;
 
         //Ações
-        
 
         switch (BC.opcode)
         {
-        case 1://Alterar Case
-            estadoAtual = LoadAcesso5;            
+        case 1: //Alterar Case
+            estadoAtual = LoadAcesso5;
             break;
-        case 2://Alterar Case
+        case 2: //Alterar Case
             estadoAtual = SaveAcesso6;
         default:
             estadoAtual = TipoIEscrita11;
             break;
         }
-    
 
     case Ori4:
-        // *OrI -- Execução ORI -- 5 -> 6 
+        // *OrI -- Execução ORI -- 5 -> 6
         BC.ULAOp = 3;
 
         estadoAtual = TipoIEscrita11;
@@ -229,19 +215,47 @@ void MaquinaEstados(){
         BC.RegDst = 0;
         BC.MemParaReg = 0;
 
-
         break;
     default:
         break;
     }
-
-
 }
+/*
+**********************************************
+*****Declaração de Métodos e Variáveis********
+**********************************************
+*/
+
+int pc;
+int A;
+int B;
+int saidaUla;
+int regInst;
+int regDadoMem;
+int mux2(int a, int b, int controle);
+int mux3(int a, int b, int c, int controle);
+int ula(int a, int b,int func);
+void atualizaPc(int value, int inc);
+int escritaPC(int zero);
+void leituraRegistradores(int reg1, int reg2);
+void escritaRegistradores(int RegEsc, int reg, int dado);
+int leMemoria(int endereco, int lerMem);
+int charToHex(char c);
+int lineHexToInt(char* numero);
+void leArquivo();
+int* memoria;
+int* data;
+int registradores[32];
+
+
+/*
+*************************************
+*****Definição dos métodos***********
+*************************************
+*/
 
 void main(){
-    memoria = calloc(50, sizeof(int));
-    registradores = calloc(32, sizeof(int));
-    *(registradores + 29) = memoria + 50;
+    memoria = malloc(50*sizeof(int));
     data = memoria + 20;
     leArquivo();
 }
@@ -292,7 +306,7 @@ int ula(int a, int b,int func)
     case 1:       // 01: beq a ula faz um subb
         if(a == b)
             return 1;
-        return 0; // codigo do subb
+        return 0;
     case 2:       // 10: operações do tipo-R
         switch (func)
         {
@@ -317,14 +331,7 @@ int ula(int a, int b,int func)
         break;
     }
 }
-// conferir inc no controler
-void atualizaPc(int value, int inc)
-{
-    if (inc == 1)
-    {
-        pc = value;
-    }
-}
+
 
 int escritaPC(int zeroUla)
 {
@@ -353,12 +360,19 @@ int memOp(int endereco, int dado, int EscMem, int LerMem)
     else if (LerMem == 1)
         return memoria[endereco];
 }
+
+/*
+****************************************
+*****Leitura do Arquivo Input***********
+****************************************
+*/
+
 void leArquivo(){
     FILE *arq;
     char linha[15];
     arq = fopen("Programa.mips", "rt");
     if(arq == NULL){
-        printf("Problema ao abrir o arquivo");
+        printf("Problema ao abrir o arquivo.");
         return;
     }
     while(!feof(arq)){
@@ -366,7 +380,7 @@ void leArquivo(){
         if(memoria < data){
             *memoria++ = lineHexToInt(linha);
         }else{
-            printf("Programa não cabe na memória");
+            printf("Programa não cabe na memória.");
             return;
         }
             printf("%d\n", *(memoria - 1));
@@ -386,6 +400,7 @@ int lineHexToInt(char* num){
     }
     return resp;
 }
+
 int charToHex(char c){
     switch (c)
     {
