@@ -275,11 +275,12 @@ void main(){
     data = memoria + 20;
     leArquivo();
 
-    for()
+    int i;
+    while(memoria[pc] != 0)
     {
         MaquinaEstados();
-        print
-        scanf();
+        //metodo print (ta no meu note)
+        scanf("%d",&i);
     }
 
 }
