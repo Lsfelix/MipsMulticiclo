@@ -28,21 +28,14 @@ struct Controle{
 
 enum Estados
 {
-    Busca0,
-    Decodifica1,
-    TipoI2,
-    AddI3,
-    Ori4,
-    LoadAcesso5,
-    SaveAcesso6,
-    TipoRExec7,
-    TipoREscrita8,
-    SaltoCond9,
-    SaltoIncond10,
-    TipoIEscrita11
+    Busca,
+    Decodifica,
+    Execucao,
+    Memoria,
+    Write,
 };
 
-enum Estados estadoAtual = Busca0;
+enum Estados estadoAtual = Busca;
 
 
 /*
@@ -56,9 +49,11 @@ void MaquinaEstados()
 {
 
     switch (estadoAtual)
+        //Nome Estado -- Instruções que usam estado ---
+
     {
-    case Busca0:
-        //Busca da instrução -- 0 -> 1
+    case Busca:
+        //Busca da instrução -- 
 
         //Define sinais de Controle
         BC.LerMem = 1;
@@ -71,15 +66,17 @@ void MaquinaEstados()
         BC.FontePC = 0;
 
         //Ações
+        
         regInst = memoria[pc];
         //PC = PC + 1
+        pc = ula(pc,1,0);
 
         //Próximo Estado
-        estadoAtual = Decodifica1;
+        estadoAtual = Decodifica;
         break;
 
-    case Decodifica1:
-        //Decodificação da instrução -- leitura dos registradores Rs e Rt -- 1 -> 3 || 6 || 8 || 9
+    case Decodifica:
+        //Decodificação da instrução -- leitura dos registradores Rs e Rt --
 
         //Define sinais de Controle
         BC.ULAFonteA = 0;
@@ -90,132 +87,149 @@ void MaquinaEstados()
         BC.opcode = regInst >> 26;
         A = registradores[(regInst >> 21) & 31];
         B = registradores[(regInst >> 17) & 31];
-        ///saidaUla = ula(pc,(regInst & 32767));
+        UlaSaida = ula(pc , (regInst & 0b1111111111111111), 0);
 
         //Próximos estados
+        
+
+        break;
+
+    case Execucao:
+        //Etapa de execução de instruções --
+
+
         switch (BC.opcode)
         {
-        case 1:
-            estadoAtual = TipoI2;
-            break;
+        
         case 0:
-            estadoAtual = TipoRExec7;
+            // *Tipo R* -- Execução --
+            
+            //Define Sinais de Controle
+            BC.ULAFonteA = 1;
+            BC.ULAFonteB = 0;
+            BC.ULAOp = 2;
+
+            //Ações
+            UlaSaida = ula(A, B, regInst & 0b111111);
+
             break;
-        case 3:
-            estadoAtual = SaltoCond9;
-            break;
-        case 4:
-            estadoAtual = SaltoIncond10;
-            break;
-        default:
-            break;
-        }
-
-        break;
-
-    case TipoI2:
-        // *TipoI* -- Define o tipo I -- 2 -> 3 | 4
-
-        //Define sinais de controle
-        BC.ULAFonteA = 1;
-        BC.ULAFonteB = 2;
-
-        //Ações
-
-        //Próximos estados
-        switch (BC.opcode)
-        {
+        
         case 1:
-            estadoAtual = AddI3;
+            // *TipoI* -- Execucao --
+
+            //Define sinais de controle
+            BC.ULAFonteA = 1;
+            BC.ULAFonteB = 2;
+
+
+            break;
+        
+        case 4:
+            //Branch if Equal -- Execução
+
+            //Sinais de controle
+
+            //Ação
+            if(A == B){
+                pc = UlaSaida;
+            }
+
             break;
 
-        default:
-            estadoAtual = Ori4;
+        case 2:
+            //Jump
+
+            pc = (pc & 11110000000000000000000000000000) & (regInst & 0b11111111111111111111111111);
+            
             break;
+
+        case 36:
+            //Load Word -- Calculo da posição da memória.
+
+            //Sinais de Controle
+            BC.ULAOp = 0;
+
+            //Ações
+            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
+            
+            break;
+
+        case 43:
+            //Store Word -- Calculo da posição da memória.
+            BC.ULAOp = 0;
+
+            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
+            break;
+
+        default : 
+             break;
         }
 
+        //Próximo Estado
+        estadoAtual = Memoria;
+
         break;
-
-    case AddI3:
-        // *LW* ou *SW* ou *ADDIU* ou *LUI* -- Execução da soma --  3 -> 5 | 3 | 4
-        BC.ULAOp = 0;
-
-        //Ações
+        
+    case Memoria:
 
         switch (BC.opcode)
         {
-        case 1: //Alterar Case
-            estadoAtual = LoadAcesso5;
+        case 0:
+            //Tipo R -- Escrita no Registador Destino
+
+            //Sinais de Controle
+
+            //Ações
+            
+            registradores[regInst & 0b1111100000000000] = UlaSaida;
+
             break;
-        case 2: //Alterar Case
-            estadoAtual = SaveAcesso6;
+
+        case 36:
+            //Load Word -- Acesso à memória
+
+            //Sinais de Controle
+
+            //Ações
+            regDadoMem = memoria[UlaSaida];
+
+            break;
+
+        case 43:
+            //SW
+
+            memoria[UlaSaida] = B;
+
+            break;
+
         default:
-            estadoAtual = TipoIEscrita11;
             break;
         }
 
-    case Ori4:
-        // *OrI -- Execução ORI -- 5 -> 6
-        BC.ULAOp = 3;
-
-        estadoAtual = TipoIEscrita11;
         break;
 
-    case LoadAcesso5:
-        // *LW* -- Acesso à memória -- 3 -> 4
-        BC.LerMem = 1;
-        BC.IouD = 1;
-        estadoAtual = TipoIEscrita11;
-        break;
+    case Write:
 
-    case SaveAcesso6:
-        // *SW* -- Acesso á memória -- 5 -> 0
-        BC.EscMem = 1;
-        BC.IouD = 1;
-        estadoAtual = Busca0;
-        break;
+        switch (BC.opcode)
+        {
+        case 36:
+            //Load Word --- Write Back
 
-    case TipoRExec7:
-        // *Tipo R* -- Execução -- 6 -> 7
-        BC.ULAFonteA = 1;
-        BC.ULAFonteB = 0;
-        BC.ULAOp = 2;
-        estadoAtual = TipoREscrita8;
-        break;
+            //Sinais de Controle
 
-    case TipoREscrita8:
-        // *Tipo R* -- Escrita em Rd -- 7 -> 0
-        BC.RegDst = 1;
-        BC.EscReg = 1;
-        BC.MemParaReg = 0;
-        estadoAtual = Busca0;
-        break;
+            //Ações
+            registradores[regInst & 0b111110000000000000000] = regDadoMem;
 
-    case SaltoCond9:
-        // *Desvio Condicional* -- Término do desvio condicional -- 8 -> 0
-        BC.ULAFonteA = 1;
-        BC.ULAFonteB = 0;
-        BC.ULAOp = 1;
-        BC.Branch = 1;
-        BC.PCEsc = 0;
-        BC.FontePC = 1;
-        estadoAtual = Busca0;
-        break;
-
-    case SaltoIncond10:
-        // *Desvio Incondicional* -- Término do desvio incondicional -- 9 -> 0
-        BC.PCEsc = 1;
-        BC.FontePC = 2;
-        estadoAtual = Busca0;
-        break;
-
-    case TipoIEscrita11:
-        // *Tipo I* -- Escrita nos registardores -- 10 -> 0
-        BC.EscReg = 1;
-        BC.RegDst = 0;
-        BC.MemParaReg = 0;
+            break;
+        
+        default:
+            break;
+        }
 
         break;
+
+        estadoAtual = Busca;
+   
     default:
         break;
     }
@@ -229,7 +243,7 @@ void MaquinaEstados()
 int pc;
 int A;
 int B;
-int saidaUla;
+int UlaSaida;
 int regInst;
 int regDadoMem;
 int mux2(int a, int b, int controle);
