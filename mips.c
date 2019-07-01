@@ -258,7 +258,7 @@ int regDadoMem;
 int ula(int a, int b,int func);
 int charToHex(char c);
 int lineHexToInt(char* numero);
-void leArquivo();
+void lerArquivo();
 int* memoria;
 int* data;
 int registradores[32];
@@ -273,7 +273,8 @@ int registradores[32];
 void main(){
     memoria = malloc(50*sizeof(int));
     data = memoria + 20;
-    leArquivo();
+    registradores[29] = 50;
+    lerArquivo();
 
     int i;
     while(memoria[pc] != 0)
@@ -337,40 +338,48 @@ int ula(int a, int b,int func)
 ****************************************
 */
 
-void leArquivo(){
+void lerArquivo(){
     FILE *arq;
     char linha[15];
     arq = fopen("Programa.mips", "rt");
+    int* mem = memoria;
+    int* dat = data;
     if(arq == NULL){
-        printf("Problema ao abrir o arquivo.");
+        printf("Problema ao abrir o arquivo");
         return;
     }
-    while(!feof(arq)){
+    while(getc(arq) != '.'){
         fgets(linha, 15, arq);
-        if(memoria < data){
-            *memoria++ = lineHexToInt(linha);
+        if(mem < data){
+            *mem++ = lineHexToInt(linha);
         }else{
-            printf("Programa não cabe na memória.");
+            printf("Programa não cabe na memória");
             return;
         }
-            printf("%d\n", *(memoria - 1));
+    }
+    fgets(linha, 15, arq);
+    while(getc(arq) != '.'){
+        fgets(linha, 15, arq);
+        if(dat < (memoria + registradores[29])){
+            *dat++ = lineHexToInt(linha);
+        }else{
+            printf("Dados não cabem na memória");
+            return;
+        }
     }
     fclose(arq);
 }
 int lineHexToInt(char* num){
-    num += 2;
-    int i = 0;
+    num += 1;
     int resp = 0;
-    while (i != 8)
+    while (*(num+1) != '\n')
     {
         resp = resp << 4;
-        resp += charToHex(*num++);
-        i++;
-      
+        resp += charToHex(*num);
+        num++;
     }
     return resp;
 }
-
 int charToHex(char c){
     switch (c)
     {
