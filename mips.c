@@ -49,7 +49,6 @@ void MaquinaEstados()
 {
 
     switch (estadoAtual)
-        //Nome Estado -- Instruções que usam estado ---
 
     {
     case Busca:
@@ -65,12 +64,11 @@ void MaquinaEstados()
         BC.PCEsc = 1;
         BC.FontePC = 0;
 
-        //Ações
-        
+        //Ações   
         regInst = memoria[pc];
         //PC = PC + 1
         pc = ula(pc,1,0);
-
+        
         //Próximo Estado
         estadoAtual = Decodifica;
         break;
@@ -86,12 +84,11 @@ void MaquinaEstados()
         //Ações
         BC.opcode = regInst >> 26;
         A = registradores[(regInst >> 21) & 31];
-        B = registradores[(regInst >> 17) & 31];
+        B = registradores[(regInst >> 16) & 31];
         UlaSaida = ula(pc , (regInst & 0b1111111111111111), 0);
 
         //Próximos estados
-        
-
+        estadoAtual = Execucao;
         break;
 
     case Execucao:
@@ -111,16 +108,19 @@ void MaquinaEstados()
 
             //Ações
             UlaSaida = ula(A, B, regInst & 0b111111);
+            
+            //Próximo Estado
+            estadoAtual = Memoria;
 
             break;
         
-        case 1:
-            // *TipoI* -- Execucao --
+        case 9:
+            // *TipoI* -- ADDIU -- Execucao --
 
             //Define sinais de controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
-
+            
 
             break;
         
@@ -134,13 +134,19 @@ void MaquinaEstados()
                 pc = UlaSaida;
             }
 
+            //Próximo Estado
+            estadoAtual = Busca;
+
             break;
 
         case 2:
             //Jump
 
             pc = (pc & 11110000000000000000000000000000) & (regInst & 0b11111111111111111111111111);
-            
+
+            //Próximo Estado
+            estadoAtual = Busca;
+
             break;
 
         case 36:
@@ -155,18 +161,20 @@ void MaquinaEstados()
             break;
 
         case 43:
+            
             //Store Word -- Calculo da posição da memória.
             BC.ULAOp = 0;
 
+            //Ações
             UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
+
+
             break;
 
         default : 
              break;
         }
 
-        //Próximo Estado
-        estadoAtual = Memoria;
 
         break;
         
@@ -178,10 +186,10 @@ void MaquinaEstados()
             //Tipo R -- Escrita no Registador Destino
 
             //Sinais de Controle
-
+            BC.RegDst = 1;
             //Ações
             
-            registradores[regInst & 0b1111100000000000] = UlaSaida;
+            registradores[regDest()] = UlaSaida;
 
             break;
 
@@ -216,9 +224,10 @@ void MaquinaEstados()
             //Load Word --- Write Back
 
             //Sinais de Controle
+            BC.RegDst = 0;
 
             //Ações
-            registradores[regInst & 0b111110000000000000000] = regDadoMem;
+            registradores[regDest()] = regDadoMem;
 
             break;
         
@@ -246,14 +255,7 @@ int B;
 int UlaSaida;
 int regInst;
 int regDadoMem;
-int mux2(int a, int b, int controle);
-int mux3(int a, int b, int c, int controle);
 int ula(int a, int b,int func);
-void atualizaPc(int value, int inc);
-int escritaPC(int zero);
-void leituraRegistradores(int reg1, int reg2);
-void escritaRegistradores(int RegEsc, int reg, int dado);
-int leMemoria(int endereco, int lerMem);
 int charToHex(char c);
 int lineHexToInt(char* numero);
 void leArquivo();
@@ -272,44 +274,25 @@ void main(){
     memoria = malloc(50*sizeof(int));
     data = memoria + 20;
     leArquivo();
+
+    for()
+    {
+        MaquinaEstados();
+        print
+        scanf();
+    }
+
 }
 
-// apagado desloca dois, pois ele é usado para pular os endereços de 4 em 4 e nossa memória vai de 1 em 1
-int mux2(int a, int b, int controle)
-{
-    switch (controle)
-    {
-    case 0:
-        return a;
-        break;
-    case 1:
-        return b;
-        break;
-    default:
-        break;
+int regDest(){
+    if(BC.RegDst == 1){
+        //15 a 11
+        return regInst & 0b1111100000000000;
+    }else{
+        //20 - 16
+        return regInst & 0b111110000000000000000;
     }
 }
-
-int mux3(int a, int b, int c, int controle)
-{
-    switch (controle)
-    {
-    case 0:
-        return a;
-        break;
-    case 1:
-        return b;
-        break;
-    case 2:
-        return c;
-        break;
-    default:
-        break;
-    }
-}
-//Apagado extensão de sinal, pois não é um prolema em c
-//Apagado mux4 pois o mux que vai para ula na vdd só precisa de 3 entradas, desconsiderando a de deslocar 2 bits
-//FIXME: Conferir operações de sll e srl
 
 int ula(int a, int b,int func)
 {
@@ -346,34 +329,6 @@ int ula(int a, int b,int func)
     }
 }
 
-
-int escritaPC(int zeroUla)
-{
-    int temp = zeroUla & BC.Branch;
-    return temp | BC.PCEsc;
-}
-
-void leituraRegistradores(int reg1, int reg2)
-{
-    A = registradores[reg1];
-    B = registradores[reg2];
-}
-
-void escritaRegistradores(int RegEsc, int reg, int dado)
-{
-    if (BC.EscReg == 1)
-    {
-        registradores[reg] = dado;
-    }
-}
-//FIXME: implementar corretamente o caso em que a memoria não pode ser lida
-int memOp(int endereco, int dado, int EscMem, int LerMem)
-{
-    if (EscMem == 1)
-        memoria[endereco] = dado;
-    else if (LerMem == 1)
-        return memoria[endereco];
-}
 
 /*
 ****************************************
