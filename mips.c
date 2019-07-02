@@ -2,6 +2,30 @@
 #include <stdlib.h>
 
 /*
+**********************************************
+*****Declaração de Métodos e Variáveis********
+**********************************************
+*/
+
+int pc;
+int A;
+int B;
+int UlaSaida;
+int regInst;
+int regDadoMem;
+int regDest(); // Devolve o registrador destino adequado
+int ulaFonteA(); // Devolve o valor fonte A da ula adequada.
+int ulaFonteB(); // Devolve o valor fonte B da ula adequada.
+int ula(int a, int b, int func);
+int charToHex(char c);
+int lineHexToInt(char* numero);
+void lerArquivo();
+int* memoria;
+int* data;
+int* registradores;
+
+
+/*
 *************************************
 *****Estrutura do Bloco de BC********
 *************************************
@@ -339,29 +363,6 @@ void MaquinaEstados()
         break;
     }
 }
-/*
-**********************************************
-*****Declaração de Métodos e Variáveis********
-**********************************************
-*/
-
-int pc;
-int A;
-int B;
-int UlaSaida;
-int regInst;
-int regDadoMem;
-int regDest(); // Devolve o registrador destino adequado
-int ulaFonteA(); // Devolve o valor fonte A da ula adequada.
-int ulaFonteB(); // Devolve o valor fonte B da ula adequada.
-int ula(int a, int b, int func);
-int charToHex(char c);
-int lineHexToInt(char* numero);
-void lerArquivo();
-int* memoria;
-int* data;
-int registradores[32];
-
 
 /*
 *************************************
@@ -369,20 +370,68 @@ int registradores[32];
 *************************************
 */
 
+void printy()
+{
+    printf("==========================================\n");
+    printf("|REGISTRADORES   |               CONTROLE|\n");
+    printf("|                |                       |\n");
+    printf("|$zero: %d       |             BRANCH: %2d|\n",registradores[0],BC.Branch);
+    printf("|$1: %3d         |              PCEsc: %2d|\n",registradores[1],BC.PCEsc);
+    printf("|$2: %3d         |               IouD: %2d|\n",registradores[2],BC.IouD);
+    printf("|$3: %3d         |             LerMem: %2d|\n",registradores[3],BC.LerMem);
+    printf("|$4: %3d         |             EscMem: %2d|\n",registradores[4],BC.EscMem);
+    printf("|$5: %3d         |         MemParaReg: %2d|\n",registradores[5],BC.MemParaReg);
+    printf("|$6: %3d         |              IREsc: %2d|\n",registradores[6],BC.IREsc);
+    printf("|$7: %3d         |            FontePC: %2d|\n",registradores[7],BC.FontePC);
+    printf("|$8: %3d         |              ULAOp: %2d|\n",registradores[8],BC.ULAOp);
+    printf("|$9: %3d         |           ULAFontB: %2d|\n",registradores[9],BC.ULAFonteB);
+    printf("|$10: %3d        |           ULAFontA: %2d|\n",registradores[10],BC.ULAFonteA);
+    printf("|$11: %3d        |             EscReg: %2d|\n",registradores[11],BC.EscReg);
+    printf("|$12: %3d        |             RegDst: %2d|\n",registradores[12],BC.RegDst);
+    printf("|$13: %3d        |_______________________|\n",registradores[13]);
+    printf("|$14: %3d        |        MEMORIA        |\n",registradores[1]);
+    int j = 15;
+    for (int i = 0; i < 21; i++)
+    {
+        if (memoria[i] != 0)
+        {
+            if (j <= 31)
+            {
+                printf("|$%d: %3d        |  mem[%2d]: %11X |\n",j,registradores[j],i,memoria[i]);
+            }
+            else
+            {
+                printf("|                |  mem[%2d]: %11X |\n",i,memoria[i]);
+            }      
+        }
+        else
+        {
+            if (j <= 31)
+            {
+                printf("|$%d: %3d        |                     |\n",j,registradores[j]);
+            }
+        }
+        j++;
+    }
+    printf("==========================================\n");
+}
+
 void main(){
     memoria = malloc(50*sizeof(int));
     data = memoria + 20;
+    registradores = calloc(32,sizeof(int));
     registradores[29] = 50;
     lerArquivo();
+    pc = 0;
 
     int i;
-    while(memoria[pc] != 0 && (estadoAtual != Busca))
+    while(memoria[pc] != 0 || (estadoAtual != Busca))
     {
         MaquinaEstados();
-        //metodo print (ta no meu note)
+        printy();
+        printf("Digite qualquer coisa para avancar: ");
         scanf("%d",&i);
     }
-
 }
 
 int regDest(){
@@ -484,9 +533,10 @@ void lerArquivo(){
         printf("Problema ao abrir o arquivo");
         return;
     }
+    printf("reskein: %d\n",*memoria);
     while(getc(arq) != '.'){
         fgets(linha, 15, arq);
-        if(mem < data){
+        if(mem < dat){
             *mem++ = lineHexToInt(linha);
         }else{
             printf("Programa não cabe na memória");
@@ -494,14 +544,16 @@ void lerArquivo(){
         }
     }
     fgets(linha, 15, arq);
+    int teste = 20;
     while(getc(arq) != '.'){
         fgets(linha, 15, arq);
-        if(dat < (memoria + registradores[29])){
+        if(teste < 40){
             *dat++ = lineHexToInt(linha);
         }else{
             printf("Dados não cabem na memória");
             return;
         }
+        teste++;
     }
     fclose(arq);
 }

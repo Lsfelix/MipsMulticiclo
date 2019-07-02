@@ -14,4 +14,4 @@
 0XAD2A0000
 .data
 0x00000006
-end data
+.end data
