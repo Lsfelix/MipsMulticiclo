@@ -621,7 +621,7 @@ void lerArquivo(){
     }
     
     fgets(linha, 15, arq);
-    while (linha[0] != '.' || !feof(arq))
+    while (linha[0] != '.')
     {
         if(mem < dat){
             *mem = strtoull(linha, NULL, 0);
