@@ -1,0 +1,22 @@
+#esse cédigo pega um valor salvo em A e troca ele apenas pelo seu segundo bit
+		.text
+		.globl main
+main:
+		beq $zero, $zero, label  # pula pra label 
+load:	addiu $t3, $t3,  5 # sema 5 em $t3
+label:	addu $t1, $t1, $t2  # soma $t2 a $t1 e salva em $t1
+		beq $t1, $t3, load # pula no primeiro laço e no segundo não
+		addu $t1, $t1, $t3 # soma $t3 no $t1 e salva em $t1 ($t1 = 5)
+		la $t1, A # lui e ori com o endereço de A (no nosso mips, 20)
+		lw $t2, 0($t1) # carrega $t2 com o valor de A (6)
+		slt $t4, $t3, $t2 # seta o $t1 em 1 se $t3 for menor que $t2 , $t4 = 1
+		sll $t4, $t4, 1 # desloca o $t4 em 1 pra esquerda, $t4 = 2
+		and $t2, $t2, $t4 # faz um and de $t4 e $t2, $t2 = 2
+		srl $t2, $t2, 1 # desloca o $t2 em 1 pra direita, $t2 = 1
+		j end # pula para o end
+		addu $t2, $t2, $t2 # essa instrução nunca ée xecutada
+end: 	sw $t2, 0($t1) # salva o valor de $t2 no endereço de A, mem[20] = 1
+	
+		.data
+	 
+A: .word 0X06 # valor salvo em A

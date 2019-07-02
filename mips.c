@@ -366,8 +366,8 @@ void printy()
 {
     printf("==========================================\n");
     printf("|REGISTRADORES   |               CONTROLE|\n");
-    printf("|                |                       |\n");
-    printf("|$zero: %d       |             BRANCH: %2d|\n",registradores[0],BC.Branch);
+    printf("                 |                       |\n");
+    printf("|$zero: %d        |             BRANCH: %2d|\n",registradores[0],BC.Branch);
     printf("|$1: %3d         |              PCEsc: %2d|\n",registradores[1],BC.PCEsc);
     printf("|$2: %3d         |               IouD: %2d|\n",registradores[2],BC.IouD);
     printf("|$3: %3d         |             LerMem: %2d|\n",registradores[3],BC.LerMem);
@@ -400,7 +400,7 @@ void printy()
         {
             if (j <= 31)
             {
-                printf("|$%d: %3d        |                     |\n",j,registradores[j]);
+                printf("|$%d: %3d        |                       |\n",j,registradores[j]);
             }
         }
         j++;
@@ -621,7 +621,7 @@ void lerArquivo(){
     }
     
     fgets(linha, 15, arq);
-    while (linha[0] != '.')
+    while (linha[0] != '.' || !feof(arq))
     {
         if(mem < dat){
             *mem = strtoull(linha, NULL, 0);
