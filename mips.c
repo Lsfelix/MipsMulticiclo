@@ -17,6 +17,7 @@ int regDadoMem;
 int regDest(); // Devolve o registrador destino adequado
 int ulaFonteA(); // Devolve o valor fonte A da ula adequada.
 int ulaFonteB(); // Devolve o valor fonte B da ula adequada.
+void binaryString(unsigned int x);
 int ula(int a, int b, int func);
 int charToHex(char c);
 int lineHexToInt(char* numero);
@@ -112,7 +113,7 @@ void MaquinaEstados()
         BC.ULAFonteB = 3;
         BC.ULAOp = 0;
         //Ações
-        BC.opcode = regInst >> 26;
+        BC.opcode = (regInst >> 26) & 63;
         A = registradores[(regInst >> 21) & 31];
         B = registradores[(regInst >> 16) & 31];
 
@@ -139,11 +140,7 @@ void MaquinaEstados()
 
             //Ações
 
-            //Se for um sll ou srl, muda a fonte B da ula para o SHAMT
-            if (regInst & 63 == 0 || regInst & 63 == 2)
-            {
-                B = registradores[(regInst >> 6) & 31];
-            }
+            
 
             UlaSaida = ula(A, B, regInst & 0b111111);
             
@@ -229,8 +226,7 @@ void MaquinaEstados()
             BC.FontePC = 2;
 
             //Ações
-            //***Revisar Calculo***
-            pc = (pc & 0b11110000000000000000000000000000) | (regInst & 0b11111111111111111111111111);
+            pc = (pc & 0b11110000000000000000000000000000) + ((regInst & 0b11111111111111111111111111) );
 
             //Próximo Estado
             estadoAtual = Busca;
@@ -292,8 +288,8 @@ void MaquinaEstados()
             estadoAtual = Busca;
             break;
 
-        case 1:
-            //Tipo I -- LUI - Escrita na parte superior do Registrador Destino
+        case 15:
+            //Tipo I -- LUI - Memória -- Acesso à memória
 
             //Sinais de Controle
             BC.RegDst = 0;
@@ -303,8 +299,11 @@ void MaquinaEstados()
             //Ações
             registradores[regDest()] = UlaSaida << 16;
 
+
             //Próximo Estado
             estadoAtual = Busca;
+
+            break;
         case 35:
             //Load Word -- Acesso à memória
 
@@ -366,7 +365,7 @@ void MaquinaEstados()
             registradores[regDest()] = regDadoMem;
 
             break;
-        
+
         default:
             break;
         }
@@ -432,12 +431,36 @@ void printy()
     }
     printf("PC: %d\n",pc);
     printf("OpCode: %d\n",BC.opcode);
-    printf("Estado Atual: %d\n", estadoAtual);
+    switch (estadoAtual)
+    {
+    case 0:
+        printf("Estado Atual: Busca\n");
+        break;
+    
+    case 1:
+        printf("Estado Atual: Decodificacao\n");
+        break;
+
+    case 2:
+        printf("Estado Atual: Execucao\n");
+        break;
+
+    case 3:
+        printf("Estado Atual: Memoria\n");
+        break;
+
+    case 4:
+        printf("Estado Atual: Write-Back\n");
+        break;
+
+    default:
+        break;
+    }
     printf("==========================================\n");
 }
 
 void main(){
-    memoria = malloc(50*sizeof(int));
+    memoria = calloc(50 , sizeof(unsigned long long)); 
     data = memoria + 20;
     registradores = calloc(32,sizeof(int));
     registradores[29] = 50;
@@ -452,15 +475,16 @@ void main(){
         printf("Pressione enter para avancar: ");
         scanf("%c",&i);
     }
+    printy();
 }
 
 int regDest(){
     if(BC.RegDst == 1){
         //15 a 11
-        return regInst >> 11 & 31;
+        return (regInst >> 11) & 0b11111;
     }else{
         //20 - 16
-        return regInst >> 16 & 31;
+        return (regInst >> 16) & 0b11111;
     }
 }
 
@@ -502,6 +526,7 @@ int ula(int a, int b,int func)
 {
     //a = ulaFonteA();
     //b = ulaFonteB();
+    //printf("Operadores: A = %d, B = %d.\n",a,b);
 
     switch (BC.ULAOp)
     {
@@ -514,9 +539,13 @@ int ula(int a, int b,int func)
     case 2:       // 10: operações do tipo-R
         switch (func)
         {
-        case 0:       // 000000 sll 
+        case 0:       // 000000 sll
+            a = registradores[(regInst >> 16) & 31];
+            b = (regInst >> 6) & 0b11111;
             return a << b; // a ula faz sll
-        case 2:       // 000010 srl 
+        case 2:       // 000010 srl
+            a = registradores[(regInst >> 16) & 31];
+            b = (regInst >> 6) & 0b11111;
             return a >> b; // a ula faz srl
         case 33:      // 100001 addu                 
             return a + b; // a ula faz um add
@@ -527,7 +556,7 @@ int ula(int a, int b,int func)
                 return 1;
             return 0;// a ula faz um set on less then
         default:
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+            //printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
             break;
         }
     case 3:       //11: ori a ula faz um or
@@ -554,32 +583,43 @@ void lerArquivo(){
         printf("Problema ao abrir o arquivo");
         return;
     }
-
-    while(getc(arq) != '.'){
-        fgets(linha, 15, arq);
+    
+    fgets(linha, 15, arq);
+    while (linha[0] != '.')
+    {
         if(mem < dat){
-            *mem++ = lineHexToInt(linha);
+            *mem = strtoull(linha, NULL, 0);
+            //binaryString(*mem);
+            //unsigned long long op = *mem >> 26;
+            //binaryString(op);
+            mem++;
         }else{
             printf("Programa não cabe na memória");
             return;
         }
+    
+        fgets(linha, 15, arq);
     }
+
     fgets(linha, 15, arq);
     int teste = 20;
-    while(getc(arq) != '.'){
-        fgets(linha, 15, arq);
+    while(linha[0] != '.'){
         if(teste < 40){
-            *dat++ = lineHexToInt(linha);
+            *dat++ = strtoull(linha, NULL,0);
         }else{
             printf("Dados não cabem na memória");
             return;
         }
+        fgets(linha, 15, arq);
         teste++;
     }
     fclose(arq);
 }
 int lineHexToInt(char* num){
-    num += 1;
+    long long t = strtoll(num, NULL, 0);
+    printf("%s --- ",num);
+    num++;
+    num++;
     int resp = 0;
     while (*(num) != '\n')
     {
@@ -587,8 +627,33 @@ int lineHexToInt(char* num){
         resp += charToHex(*num);
         num++;
     }
+    printf("%X e deveria ser %X\n", resp, t);
     return resp;
 }
+
+void binaryString(unsigned int x)
+{
+
+    printf("Em binario: ");
+
+    int pivot;
+
+    for (int i = 31; i >= 0; i--)
+    {
+        pivot = x >> i;
+
+        if (pivot & 1)
+        {
+            printf("1");
+        }
+        else
+        {
+            printf("0");
+        }
+    }
+    printf("\n");
+}
+
 int charToHex(char c){
     switch (c)
     {
