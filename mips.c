@@ -17,10 +17,12 @@ int regDadoMem;
 int regDest(); // Devolve o registrador destino adequado
 int ulaFonteA(); // Devolve o valor fonte A da ula adequada.
 int ulaFonteB(); // Devolve o valor fonte B da ula adequada.
-void binaryString(unsigned int x);
-int ula(int a, int b, int func);
-int charToHex(char c);
-int lineHexToInt(char* numero);
+int atualizaPc();
+void escreveMemoria();
+void escreveRegistadores();
+int registradorInstrucao();
+int lerMemoria();
+int ula(int func);
 void lerArquivo();
 int* memoria;
 int* data;
@@ -42,19 +44,19 @@ struct Controle{
     int ULAFonteB; //Decide o primeiro operando (B, 4, Imediato ou 26Bits Jump).
     int ULAFonteA; //Decide o segundo operando (A ou PC).
     int RegDst;    //Decide qual o registrador destino.
+    int FontePC;    //Decide o próximo PC (+4, desvio incondicional, desvio condicional).
+    int PCEsc;      //Habilita a escrita no PC.
+    int Branch;     //Define se é uma instrução de branch. (PCEscCond)
+    int IouD;       //Define o endereço de memória trabalhado.
+    int LerMem;     //Habilita Leitura da memória.
+    int EscMem;     //Habilita escrita em memória.
+    int MemParaReg; //Decide o que será escrito no registrador destino.
+    int EscReg;     //Habilita escrita nos registradores.
+    int IREsc;      //Habilita registrador de instrução.
 
 
     //Esses não são necessários por ser uma simulação, apenas abstração
 
-    int PCEsc;      //Habilita a escrita no PC.
-    int IouD;       //Define o endereço de memória trabalhado.
-    int LerMem;     //Habilita Leitura da memória.
-    int IREsc;      //Habilita registrador de instrução.
-    int FontePC;    //Decide o próximo PC (+4, desvio incondicional, desvio condicional).
-    int Branch;     //Define se é uma instrução de branch.
-    int EscMem;     //Habilita escrita em memória.
-    int MemParaReg; //Decide o que será escrito no registrador destino.
-    int EscReg;     //Habilita escrita nos registradores.
 
 }BC; //Bloco de Controle
 
@@ -76,10 +78,25 @@ enum Estados estadoAtual = Busca;
 *******************************
 */
 
+void clearControl(){
+    BC.ULAOp = 0;      //Decide Operação da Ula.
+    BC.ULAFonteB = 0;  //Decide o primeiro operando (B, 4, Imediato ou 26Bits Jump).
+    BC.ULAFonteA = 0;  //Decide o segundo operando (A ou PC).
+    BC.RegDst = 0;     //Decide qual o registrador destino.
+    BC.FontePC = 0;    //Decide o próximo PC (+4, desvio incondicional, desvio condicional).
+    BC.PCEsc = 0;      //Habilita a escrita no PC.
+    BC.Branch = 0;     //Define se é uma instrução de branch. (PCEscCond)
+    BC.IouD = 0;       //Define o endereço de memória trabalhado.
+    BC.LerMem = 0;     //Habilita Leitura da memória.
+    BC.EscMem = 0;     //Habilita escrita em memória.
+    BC.MemParaReg = 0; //Decide o que será escrito no registrador destino.
+    BC.EscReg = 0;
+}
+
 //Controla as etapas da execução.
 void MaquinaEstados()
 {
-
+    clearControl();
     switch (estadoAtual)
 
     {
@@ -97,9 +114,9 @@ void MaquinaEstados()
         BC.FontePC = 0;
 
         //Ações   
-        regInst = memoria[pc];
+        regInst = registradorInstrucao();
         //PC = PC + 1
-        pc = ula(pc,1,0);
+        pc = atualizaPc();
         
         //Próximo Estado
         estadoAtual = Decodifica;
@@ -117,85 +134,66 @@ void MaquinaEstados()
         A = registradores[(regInst >> 21) & 31];
         B = registradores[(regInst >> 16) & 31];
 
-        UlaSaida = ula(pc , (regInst & 0b1111111111111111), 0);
+        UlaSaida = ula(-1);
 
         //Próximos estados
         estadoAtual = Execucao;
         break;
 
     case Execucao:
+
         //Etapa de execução de instruções --
-
-
         switch (BC.opcode)
         {
-        
-        case 0:
-            // *Tipo R* -- Execução --
-            
+
+        case 0: // *Tipo R* -- Execução --
+
             //Define Sinais de Controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 0;
             BC.ULAOp = 2;
 
-            //Ações
-
-            
-
-            UlaSaida = ula(A, B, regInst & 0b111111);
             
             //Próximo Estado
             estadoAtual = Memoria;
 
             break;
-        
-        case 9:
-            // *TipoI* -- ADDIU -- Execucao --
+
+        case 9: // *TipoI* -- ADDIU -- Execucao --
 
             //Define sinais de controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
             BC.ULAOp = 0;
 
-            //Ações
-            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
-
             //Próximo Estado
             estadoAtual = Memoria;
             break;
 
-        case 13:
-            // *TipoI* -- ORI -- Execucao --
+        case 13: // *TipoI* -- ORI -- Execucao --
 
             //Define sinais de controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
             BC.ULAOp = 3;
 
-            //Ações
-            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
-
             //Próximo Estado
             estadoAtual = Memoria;
             break;
 
-        case 15:
-            // *TipoI* -- LUI -- Execucao --
+        case 15: // *TipoI* -- LUI -- Execucao --
 
             //Define sinais de controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
             BC.ULAOp = 0;
 
-            //Ações
-            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
 
             //Próximo Estado
             estadoAtual = Memoria;
             break;
 
-        case 4:
-            //Branch if Equal -- Execução
+        case 4: //Branch if Equal -- Execução
 
             //Sinais de controle
             BC.ULAFonteA = 1;
@@ -203,61 +201,47 @@ void MaquinaEstados()
             BC.ULAOp = 1;
             BC.PCEsc = 0;
             BC.FontePC = 1;
+            BC.Branch = 1;
 
             if (UlaSaida & pow(2,15) != 0)
             {
                 UlaSaida -= pow(2,16);
             }
             
-            //Ação
-            if(ula(A,B,0) == 1){ 
-                pc = UlaSaida;               
-            }
 
             //Próximo Estado
             estadoAtual = Busca;
             break;
 
-        case 2:
-            //Jump -- Calculo do endereço de salto
+        case 2: //Jump -- Calculo do endereço de salto
 
             //Sinais de Controle
             BC.PCEsc = 1;
             BC.FontePC = 2;
 
-            //Ações
-            pc = (pc & 0b11110000000000000000000000000000) + ((regInst & 0b11111111111111111111111111) );
-
+            
             //Próximo Estado
             estadoAtual = Busca;
 
             break;
 
-        case 35:
-            //Load Word -- Calculo da posição da memória.
+        case 35: //Load Word -- Calculo da posição da memória.
 
             //Sinais de Controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
             BC.ULAOp = 0;
 
-            //Ações
-            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
-            
             //Próximo Estado
             estadoAtual = Memoria;
             break;
 
-        case 43:
-            //Store Word -- Calculo da posição da memória.
-        
+        case 43: //Store Word -- Calculo da posição da memória.
+
             //Sinais de Controle
             BC.ULAFonteA = 1;
             BC.ULAFonteB = 2;
             BC.ULAOp = 0;
-
-            //Ações
-            UlaSaida = ula(A, regInst & 0b1111111111111111, 0);
 
             //Próximo Estado
             estadoAtual = Memoria;
@@ -267,6 +251,9 @@ void MaquinaEstados()
              break;
         }
 
+        //Ações (Genérico)
+        pc = atualizaPc();
+        UlaSaida = ula(regInst & 0b111111);
 
         break;
         
@@ -274,80 +261,68 @@ void MaquinaEstados()
 
         switch (BC.opcode)
         {
-        case 0:
-            //Tipo R -- Escrita no Registador Destino
+        case 0: //Tipo R -- Escrita no Registador Destino
 
             //Sinais de Controle
             BC.RegDst = 1;
             BC.EscReg = 1;
             BC.MemParaReg = 0;
 
-            //Ações
-            registradores[regDest()] = UlaSaida;
+           
             //Próximo Estado
             estadoAtual = Busca;
             break;
 
-        case 15:
-            //Tipo I -- LUI - Memória -- Acesso à memória
+        case 15: //Tipo I -- LUI - Memória -- Acesso à memória
 
             //Sinais de Controle
             BC.RegDst = 0;
             BC.EscReg = 1;
             BC.MemParaReg = 0;
 
-            //Ações
-            registradores[regDest()] = UlaSaida << 16;
-
+            UlaSaida = UlaSaida << 16;
 
             //Próximo Estado
             estadoAtual = Busca;
 
             break;
-        case 35:
-            //Load Word -- Acesso à memória
+        case 35: //Load Word -- Acesso à memória
 
             //Sinais de Controle
             BC.LerMem = 1;
             BC.IouD = 1;
 
-            //Ações
-            regDadoMem = memoria[UlaSaida];
-
             //Próximo Estado
             estadoAtual = Write;
             break;
 
-        case 43:
-            //Store Word -- Acesso e escrita em memória
+        case 43: //Store Word -- Acesso e escrita em memória
 
             //Sinais de Controle
             BC.EscMem = 1;
             BC.IouD = 1;
-
-            //Ações
-            memoria[UlaSaida] = B;
 
             //Próximo Estado
             estadoAtual = Busca;
 
             break;
 
-        default:
-            //Tipo I -- ADDIU TESTE - Escrita na parte superior do Registrador Destino
+        default: //Tipo I -- ADDIU TESTE - Escrita na parte superior do Registrador Destino
 
             //Sinais de Controle
             BC.RegDst = 0;
             BC.EscReg = 1;
             BC.MemParaReg = 0;
 
-            //Ações
-            registradores[regDest()] = UlaSaida;
-
             //Próximo Estado
             estadoAtual = Busca;
             break;
         }
+
+        //Ações Genérico
+        escreveRegistadores();
+        escreveMemoria();
+        regDadoMem = lerMemoria();
 
         break;
 
@@ -360,15 +335,16 @@ void MaquinaEstados()
 
             //Sinais de Controle
             BC.RegDst = 0;
-
-            //Ações
-            registradores[regDest()] = regDadoMem;
+            BC.MemParaReg = 1;
+            BC.EscReg = 1;
 
             break;
 
         default:
             break;
         }
+
+        escreveRegistadores();
 
         //Próximo Estado
         estadoAtual = Busca;
@@ -488,6 +464,66 @@ int regDest(){
     }
 }
 
+int registradorInstrucao(){
+    if(BC.IREsc == 1){
+        return lerMemoria();
+    }
+}
+
+void escreveRegistadores(){
+    if(BC.EscReg == 1){
+        if(BC.MemParaReg == 1){
+            registradores[regDest()] = regDadoMem;
+        }else{
+            registradores[regDest()] = UlaSaida;
+        }
+    }
+
+}
+
+void escreveMemoria(){
+    if(BC.EscMem == 1){
+        if(BC.IouD == 1){
+            memoria[UlaSaida] = B; 
+        }
+    }
+}
+
+int lerMemoria(){
+    if(BC.LerMem == 1){
+        if(BC.IouD == 1){
+            return memoria[UlaSaida];
+        }else{
+            return memoria[pc];
+        }
+    }
+}
+
+int atualizaPc(){
+    int resultadoUla = ula(-1);
+    if ((BC.Branch & resultadoUla) == 1 || BC.PCEsc == 1)
+    {
+      //  printf("Atualizou PC :");
+        switch (BC.FontePC)
+        {
+        case 0:
+            return resultadoUla;
+            break;
+        case 1:
+      //      printf("Branch\n");
+            return UlaSaida;
+            break;
+        case 2:
+            return (pc & 0b11110000000000000000000000000000) + ((regInst & 0b11111111111111111111111111));
+            break;
+        default : 
+            break;
+        }
+    }else{
+        return pc;
+    }
+}
+
 int ulaFonteA(){
     if(BC.ULAFonteA == 0){
         //Para a soma do PC
@@ -506,7 +542,7 @@ int ulaFonteB(){
         return B;
         break;
     case 1:
-        //Para o PC + !
+        //Para o PC + 1
         return 1;
         break;
     case 2:
@@ -514,7 +550,7 @@ int ulaFonteB(){
         return regInst & 0b1111111111111111;
         break;
     case 3:
-        return (regInst & 0b1111111111111111) << 2;
+        return (regInst & 0b1111111111111111);
         break;
 
     default:
@@ -522,11 +558,11 @@ int ulaFonteB(){
     }
 }
 
-int ula(int a, int b,int func)
+int ula(int func)
 {
-    //a = ulaFonteA();
-    //b = ulaFonteB();
-    //printf("Operadores: A = %d, B = %d.\n",a,b);
+    int a = ulaFonteA();
+    int b = ulaFonteB();
+   // printf("Operadores: A = %d, B = %d.\n",a,b);
 
     switch (BC.ULAOp)
     {
@@ -614,99 +650,4 @@ void lerArquivo(){
         teste++;
     }
     fclose(arq);
-}
-int lineHexToInt(char* num){
-    long long t = strtoll(num, NULL, 0);
-    printf("%s --- ",num);
-    num++;
-    num++;
-    int resp = 0;
-    while (*(num) != '\n')
-    {
-        resp = resp << 4;
-        resp += charToHex(*num);
-        num++;
-    }
-    printf("%X e deveria ser %X\n", resp, t);
-    return resp;
-}
-
-void binaryString(unsigned int x)
-{
-
-    printf("Em binario: ");
-
-    int pivot;
-
-    for (int i = 31; i >= 0; i--)
-    {
-        pivot = x >> i;
-
-        if (pivot & 1)
-        {
-            printf("1");
-        }
-        else
-        {
-            printf("0");
-        }
-    }
-    printf("\n");
-}
-
-int charToHex(char c){
-    switch (c)
-    {
-    case '0':
-        return 0;
-        break;
-    case '1':
-        return 1;
-        break;
-    case '2':
-        return 2;
-        break;
-    case '3':
-        return 3;
-        break;
-    case '4':
-        return 4;
-        break;
-    case '5':
-        return 5;
-        break;
-    case '6':
-        return 6;
-        break;
-    case '7':
-        return 7;
-        break;
-    case '8':
-        return 8;
-        break;
-    case '9':
-        return 9;
-        break;
-    case 'A':
-        return 10;
-        break;
-    case 'B':
-        return 11;
-        break;
-    case 'C':
-        return 12;
-        break;
-    case 'D':
-        return 13;
-        break;
-    case 'E':
-        return 14;
-        break;
-    case 'F':
-        return 15;
-        break;
-    default:
-        return -1;
-        break;
-    }
 }
