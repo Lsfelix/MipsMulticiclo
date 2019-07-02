@@ -207,11 +207,14 @@ void MaquinaEstados()
             BC.PCEsc = 0;
             BC.FontePC = 1;
 
+            if (UlaSaida & pow(2,15) != 0)
+            {
+                UlaSaida -= pow(2,16);
+            }
+            
             //Ação
-            if(ula(A,B,0) == 1){
- 
-                pc = UlaSaida;
-                
+            if(ula(A,B,0) == 1){ 
+                pc = UlaSaida;               
             }
 
             //Próximo Estado
@@ -282,10 +285,9 @@ void MaquinaEstados()
             BC.RegDst = 1;
             BC.EscReg = 1;
             BC.MemParaReg = 0;
-            
+
             //Ações
             registradores[regDest()] = UlaSaida;
-
             //Próximo Estado
             estadoAtual = Busca;
             break;
@@ -333,6 +335,18 @@ void MaquinaEstados()
             break;
 
         default:
+            //Tipo I -- ADDIU TESTE - Escrita na parte superior do Registrador Destino
+
+            //Sinais de Controle
+            BC.RegDst = 0;
+            BC.EscReg = 1;
+            BC.MemParaReg = 0;
+
+            //Ações
+            registradores[regDest()] = UlaSaida;
+
+            //Próximo Estado
+            estadoAtual = Busca;
             break;
         }
 
@@ -443,10 +457,10 @@ void main(){
 int regDest(){
     if(BC.RegDst == 1){
         //15 a 11
-        return regInst & 0b1111100000000000;
+        return regInst >> 11 & 31;
     }else{
         //20 - 16
-        return regInst & 0b111110000000000000000;
+        return regInst >> 16 & 31;
     }
 }
 
@@ -504,7 +518,7 @@ int ula(int a, int b,int func)
             return a << b; // a ula faz sll
         case 2:       // 000010 srl 
             return a >> b; // a ula faz srl
-        case 33:      // 100001 addu
+        case 33:      // 100001 addu                 
             return a + b; // a ula faz um add
         case 36:      // 100100 and
             return a & b; // a ula faz um and
