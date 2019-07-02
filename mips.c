@@ -254,6 +254,10 @@ void MaquinaEstados()
         //Ações (Genérico)
         pc = atualizaPc();
         UlaSaida = ula(regInst & 0b111111);
+        if (UlaSaida & pow(2, 15) != 0)
+        {
+            UlaSaida -= pow(2, 16);
+        }
 
         break;
         
