@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 /*
 **********************************************
@@ -58,11 +59,11 @@ struct Controle{
 
 enum Estados
 {
-    Busca,
-    Decodifica,
-    Execucao,
-    Memoria,
-    Write,
+    Busca = 0,
+    Decodifica = 1,
+    Execucao = 2,
+    Memoria = 3,
+    Write = 4,
 };
 
 enum Estados estadoAtual = Busca;
@@ -110,11 +111,11 @@ void MaquinaEstados()
         BC.ULAFonteA = 0;
         BC.ULAFonteB = 3;
         BC.ULAOp = 0;
-
         //Ações
         BC.opcode = regInst >> 26;
         A = registradores[(regInst >> 21) & 31];
         B = registradores[(regInst >> 16) & 31];
+
         UlaSaida = ula(pc , (regInst & 0b1111111111111111), 0);
 
         //Próximos estados
@@ -208,7 +209,9 @@ void MaquinaEstados()
 
             //Ação
             if(ula(A,B,0) == 1){
+ 
                 pc = UlaSaida;
+                
             }
 
             //Próximo Estado
@@ -224,14 +227,14 @@ void MaquinaEstados()
 
             //Ações
             //***Revisar Calculo***
-            pc = (pc & 0b11110000000000000000000000000000) | ((regInst & 0b11111111111111111111111111) << 2);
+            pc = (pc & 0b11110000000000000000000000000000) | (regInst & 0b11111111111111111111111111);
 
             //Próximo Estado
             estadoAtual = Busca;
 
             break;
 
-        case 36:
+        case 35:
             //Load Word -- Calculo da posição da memória.
 
             //Sinais de Controle
@@ -300,7 +303,7 @@ void MaquinaEstados()
 
             //Próximo Estado
             estadoAtual = Busca;
-        case 36:
+        case 35:
             //Load Word -- Acesso à memória
 
             //Sinais de Controle
@@ -339,7 +342,7 @@ void MaquinaEstados()
 
         switch (BC.opcode)
         {
-        case 36:
+        case 35:
             //Load Word --- Write Back
 
             //Sinais de Controle
@@ -389,7 +392,7 @@ void printy()
     printf("|$11: %3d        |             EscReg: %2d|\n",registradores[11],BC.EscReg);
     printf("|$12: %3d        |             RegDst: %2d|\n",registradores[12],BC.RegDst);
     printf("|$13: %3d        |_______________________|\n",registradores[13]);
-    printf("|$14: %3d        |        MEMORIA        |\n",registradores[1]);
+    printf("|$14: %3d        |        MEMORIA        |\n",registradores[14]);
     int j = 15;
     for (int i = 0; i < 21; i++)
     {
@@ -413,6 +416,9 @@ void printy()
         }
         j++;
     }
+    printf("PC: %d\n",pc);
+    printf("OpCode: %d\n",BC.opcode);
+    printf("Estado Atual: %d\n", estadoAtual);
     printf("==========================================\n");
 }
 
@@ -424,13 +430,13 @@ void main(){
     lerArquivo();
     pc = 0;
 
-    int i;
+    char i;
     while(memoria[pc] != 0 || (estadoAtual != Busca))
     {
-        MaquinaEstados();
         printy();
-        printf("Digite qualquer coisa para avancar: ");
-        scanf("%d",&i);
+        MaquinaEstados();
+        printf("Pressione enter para avancar: ");
+        scanf("%c",&i);
     }
 }
 
@@ -480,8 +486,8 @@ int ulaFonteB(){
 
 int ula(int a, int b,int func)
 {
-    a = ulaFonteA();
-    b = ulaFonteB();
+    //a = ulaFonteA();
+    //b = ulaFonteB();
 
     switch (BC.ULAOp)
     {
@@ -507,6 +513,7 @@ int ula(int a, int b,int func)
                 return 1;
             return 0;// a ula faz um set on less then
         default:
+            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
             break;
         }
     case 3:       //11: ori a ula faz um or
@@ -533,7 +540,7 @@ void lerArquivo(){
         printf("Problema ao abrir o arquivo");
         return;
     }
-    printf("reskein: %d\n",*memoria);
+
     while(getc(arq) != '.'){
         fgets(linha, 15, arq);
         if(mem < dat){
@@ -560,7 +567,7 @@ void lerArquivo(){
 int lineHexToInt(char* num){
     num += 1;
     int resp = 0;
-    while (*(num+1) != '\n')
+    while (*(num) != '\n')
     {
         resp = resp << 4;
         resp += charToHex(*num);
