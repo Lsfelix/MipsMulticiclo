@@ -8,26 +8,26 @@
 **********************************************
 */
 
-int pc;
-int A;
-int B;
-int UlaSaida;
-int regInst;
-int regDadoMem;
-int regDest(); // Devolve o registrador destino adequado
-int ulaFonteA(); // Devolve o valor fonte A da ula adequada.
-int ulaFonteB(); // Devolve o valor fonte B da ula adequada.
-int atualizaPc();
+unsigned long long pc;
+unsigned long long A;
+unsigned long long B;
+unsigned long long UlaSaida;
+unsigned long long regInst;
+unsigned long long regDadoMem;
+unsigned long long regDest();   // Devolve o registrador destino adequado
+unsigned long long ulaFonteA(); // Devolve o valor fonte A da ula adequada.
+unsigned long long ulaFonteB(); // Devolve o valor fonte B da ula adequada.
+unsigned long long atualizaPc();
 void escreveMemoria();
 void escreveRegistadores();
-int registradorInstrucao();
-int lerMemoria();
-int ula(int func);
+unsigned long long registradorInstrucao();
+unsigned long long lerMemoria();
+unsigned long long ula(int func);
 void lerArquivo();
-int* memoria;
-int* data;
-int* registradores;
-
+int testBit(unsigned int x, int bit);
+unsigned long long *memoria;
+unsigned long long *data;
+unsigned long long *registradores;
 
 /*
 *************************************
@@ -254,10 +254,6 @@ void MaquinaEstados()
         //Ações (Genérico)
         pc = atualizaPc();
         UlaSaida = ula(regInst & 0b111111);
-        if (UlaSaida & pow(2, 15) != 0)
-        {
-            UlaSaida -= pow(2, 16);
-        }
 
         break;
         
@@ -442,7 +438,7 @@ void printy()
 void main(){
     memoria = calloc(50 , sizeof(unsigned long long)); 
     data = memoria + 20;
-    registradores = calloc(32,sizeof(int));
+    registradores = calloc(32, sizeof(unsigned long long));
     registradores[29] = 50;
     lerArquivo();
     pc = 0;
@@ -458,7 +454,8 @@ void main(){
     printy();
 }
 
-int regDest(){
+unsigned long long regDest()
+{
     if(BC.RegDst == 1){
         //15 a 11
         return (regInst >> 11) & 0b11111;
@@ -468,7 +465,8 @@ int regDest(){
     }
 }
 
-int registradorInstrucao(){
+unsigned long long registradorInstrucao()
+{
     if(BC.IREsc == 1){
         return lerMemoria();
     }
@@ -493,7 +491,8 @@ void escreveMemoria(){
     }
 }
 
-int lerMemoria(){
+unsigned long long lerMemoria()
+{
     if(BC.LerMem == 1){
         if(BC.IouD == 1){
             return memoria[UlaSaida];
@@ -503,8 +502,9 @@ int lerMemoria(){
     }
 }
 
-int atualizaPc(){
-    int resultadoUla = ula(-1);
+unsigned long long atualizaPc()
+{
+    unsigned long long resultadoUla = ula(-1);
     if ((BC.Branch & resultadoUla) == 1 || BC.PCEsc == 1)
     {
       //  printf("Atualizou PC :");
@@ -528,7 +528,8 @@ int atualizaPc(){
     }
 }
 
-int ulaFonteA(){
+unsigned long long ulaFonteA()
+{
     if(BC.ULAFonteA == 0){
         //Para a soma do PC
         return pc;
@@ -538,7 +539,8 @@ int ulaFonteA(){
     }
 }
 
-int ulaFonteB(){
+unsigned long long ulaFonteB()
+{
     switch (BC.ULAFonteB)
     {
     case 0:
@@ -551,7 +553,7 @@ int ulaFonteB(){
         break;
     case 2:
         //Imediato
-        return regInst & 0b1111111111111111;
+        return (regInst & 0b1111111111111111);
         break;
     case 3:
         return (regInst & 0b1111111111111111);
@@ -562,11 +564,11 @@ int ulaFonteB(){
     }
 }
 
-int ula(int func)
+unsigned long long ula(int func)
 {
-    int a = ulaFonteA();
-    int b = ulaFonteB();
-   // printf("Operadores: A = %d, B = %d.\n",a,b);
+    unsigned long long a = ulaFonteA();
+    unsigned long long b = ulaFonteB();
+    // printf("Operadores: A = %d, B = %d.\n",a,b);
 
     switch (BC.ULAOp)
     {
@@ -617,8 +619,8 @@ void lerArquivo(){
     FILE *arq;
     char linha[15];
     arq = fopen("Programa.mips", "rt");
-    int* mem = memoria;
-    int* dat = data;
+    unsigned long long *mem = memoria;
+    unsigned long long *dat = data;
     if(arq == NULL){
         printf("Problema ao abrir o arquivo");
         return;
@@ -629,9 +631,6 @@ void lerArquivo(){
     {
         if(mem < dat){
             *mem = strtoull(linha, NULL, 0);
-            //binaryString(*mem);
-            //unsigned long long op = *mem >> 26;
-            //binaryString(op);
             mem++;
         }else{
             printf("Programa não cabe na memória");
@@ -654,4 +653,22 @@ void lerArquivo(){
         teste++;
     }
     fclose(arq);
+}
+
+int testBit(unsigned int x, int bit)
+{
+    unsigned int var = 1 << bit;
+    if (var & x == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+int twoComplement(unsigned int x){
+
+
 }
