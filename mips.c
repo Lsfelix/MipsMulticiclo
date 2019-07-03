@@ -24,7 +24,6 @@ unsigned long long registradorInstrucao();
 unsigned long long lerMemoria();
 unsigned long long ula(int func);
 void lerArquivo();
-int testBit(unsigned int x, int bit);
 unsigned long long *memoria;
 unsigned long long *data;
 unsigned long long *registradores;
@@ -98,10 +97,8 @@ void MaquinaEstados()
 {
     clearControl();
     switch (estadoAtual)
-
     {
-    case Busca:
-        //Busca da instrução -- 
+    case Busca: //Busca da instrução --
 
         //Define sinais de Controle
         BC.LerMem = 1;
@@ -122,8 +119,7 @@ void MaquinaEstados()
         estadoAtual = Decodifica;
         break;
 
-    case Decodifica:
-        //Decodificação da instrução -- leitura dos registradores Rs e Rt --
+    case Decodifica: //Decodificação da instrução -- leitura dos registradores Rs e Rt --
 
         //Define sinais de Controle
         BC.ULAFonteA = 0;
@@ -140,9 +136,8 @@ void MaquinaEstados()
         estadoAtual = Execucao;
         break;
 
-    case Execucao:
+    case Execucao: //Etapa de execução de instruções --
 
-        //Etapa de execução de instruções --
         switch (BC.opcode)
         {
 
@@ -257,7 +252,7 @@ void MaquinaEstados()
 
         break;
         
-    case Memoria:
+    case Memoria: //Acesso a memória
 
         switch (BC.opcode)
         {
@@ -326,7 +321,7 @@ void MaquinaEstados()
 
         break;
 
-    case Write:
+    case Write: //Write - Back
 
         switch (BC.opcode)
         {
@@ -383,7 +378,7 @@ void printy()
     printf("|$13: %3d        |_______________________|\n",registradores[13]);
     printf("|$14: %3d        |        MEMORIA        |\n",registradores[14]);
     int j = 15;
-    for (int i = 0; i < 21; i++)
+    for (int i = 0; i < 40; i++)
     {
         if (memoria[i] != 0)
         {
@@ -653,22 +648,4 @@ void lerArquivo(){
         teste++;
     }
     fclose(arq);
-}
-
-int testBit(unsigned int x, int bit)
-{
-    unsigned int var = 1 << bit;
-    if (var & x == 0)
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
-int twoComplement(unsigned int x){
-
-
 }
