@@ -16,3 +16,27 @@
 .data
 0X00000006
 .end data
+
+//Programa em Assembly
+.text
+	.globl main
+main:
+	    beq $zero, $zero, label
+load:	addiu $t3, $t3, 5
+label:	addu $t1, $t1, $t2
+        beq $t1, $t3, load
+        addu $t1, $t1, $t3
+        la $t1, A
+        lw $t2, 0($t1)
+        slt $t4, $t3, $t2
+        sll $t4, $t4, 1
+        and $t2, $t2, $t4
+        srl $t2, $t2, 1
+        j end
+        addu $t2, $t2, $t2
+end:
+	    sw $t2, 0($t1)
+	
+	 .data
+	 
+A:   .word 0X06
